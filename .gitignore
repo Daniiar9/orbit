@@ -1,0 +1,8 @@
+.env
+*.db
+linkedin_session/
+__pycache__/
+.pytest_cache/
+dist/
+*.egg-info/
+.ruff_cache/
