@@ -1,8 +1,13 @@
 import asyncio
+import re
 import sys
 from pathlib import Path
 
 from orbit.config import LINKEDIN_SESSION_PATH
+
+
+def _normalize_linkedin_url(url: str) -> str:
+    return re.sub(r"https://([\w-]+)\.linkedin\.com", "https://www.linkedin.com", url)
 
 
 def _session_path() -> Path:
@@ -61,6 +66,7 @@ async def _safe_close(p, context):
 
 
 async def get_person_profile(linkedin_url: str) -> dict:
+    linkedin_url = _normalize_linkedin_url(linkedin_url)
     p, context, error = await _get_context()
     if error:
         return {"error": True, "message": error}
@@ -106,6 +112,7 @@ async def get_person_profile(linkedin_url: str) -> dict:
 
 
 async def get_recent_posts(linkedin_url: str, limit: int = 5) -> list[dict]:
+    linkedin_url = _normalize_linkedin_url(linkedin_url)
     p, context, error = await _get_context()
     if error:
         return []
@@ -138,6 +145,7 @@ async def get_recent_posts(linkedin_url: str, limit: int = 5) -> list[dict]:
 
 
 async def get_recent_activity(linkedin_url: str) -> list[dict]:
+    linkedin_url = _normalize_linkedin_url(linkedin_url)
     p, context, error = await _get_context()
     if error:
         return []
@@ -170,6 +178,7 @@ async def get_recent_activity(linkedin_url: str) -> list[dict]:
 
 
 async def check_connection_status(linkedin_url: str) -> str:
+    linkedin_url = _normalize_linkedin_url(linkedin_url)
     p, context, error = await _get_context()
     if error:
         return "unknown"

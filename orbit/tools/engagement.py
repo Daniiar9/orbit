@@ -228,6 +228,13 @@ async def orbit_get_intro_angle(linkedin_url: str) -> dict:
             responses = [e for e in engagements if e.prospect_response]
             deep_responses = [e for e in responses if e.response_depth in ("moderate", "deep")]
 
+            if prospect.relationship_state in ("cold", "warming") and len(deep_responses) == 0:
+                return {
+                    "blocked": True,
+                    "reason": "Not enough relationship evidence. Send a connection request first and wait for acceptance before any follow-up.",
+                    "current_state": prospect.relationship_state,
+                }
+
             missing = []
             if len(deep_responses) < 2:
                 missing.append(f"Need {2 - len(deep_responses)} more meaningful bidirectional interactions.")

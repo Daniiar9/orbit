@@ -55,6 +55,12 @@ def get_next_action(
     engagements: list,
     signal_density: float,
 ) -> tuple[str, str]:
+    if state == "cold" and signal_density < 3 and not engagements:
+        return (
+            "Send a short connection request only. No message beyond 1-2 sentences.",
+            "No signals to act on. Connect first, then monitor.",
+        )
+
     if signal_density < 3:
         return (
             "Insufficient signal density. Consider removing from active list.",
