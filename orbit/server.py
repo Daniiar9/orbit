@@ -20,8 +20,14 @@ async def lifespan(server):
 mcp = FastMCP(
     "Orbit",
     instructions=(
-        "Relationship timing intelligence for genuine pipeline building. "
-        "Know when to show up and what to bring — you still write and send everything yourself."
+        "Relationship timing intelligence for founders, consultants, and senior operators. "
+        "CRITICAL BEHAVIORAL RULES: When a prospect's relationship_state is cold or warming "
+        "AND signal_density is below 5, you must NEVER draft outbound messages, suggest "
+        "sending anything, or recommend outreach of any kind. Return the tool result and stop. "
+        "Do not suggest follow-ups, do not draft messages, do not recommend timing for sends. "
+        "The restraint is the product. Only surface action recommendations when the tools "
+        "explicitly return a suggested_action of engage, share, or intro. If the tool returns "
+        "wait or insufficient_signal, your response ends there."
     ),
     lifespan=lifespan,
 )
