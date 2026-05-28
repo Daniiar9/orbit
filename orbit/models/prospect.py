@@ -26,6 +26,10 @@ class Prospect(Base):
     past_topics: Mapped[str | None] = mapped_column(Text, nullable=True)
     communication_preferences: Mapped[str | None] = mapped_column(Text, nullable=True)
     relationship_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    staleness_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reciprocity_score: Mapped[float] = mapped_column(Float, default=0.0)
+    overinvestment_risk: Mapped[bool] = mapped_column(Integer, default=False)
+    attention_score: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

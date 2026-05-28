@@ -31,6 +31,10 @@ async def orbit_get_overview() -> dict:
                 "state": p.relationship_state,
                 "signal_score": p.signal_score,
                 "signal_density": p.signal_density,
+                "attention_score": p.attention_score,
+                "staleness_days": p.staleness_days,
+                "reciprocity_score": p.reciprocity_score,
+                "overinvestment_risk": p.overinvestment_risk,
                 "next_action": p.next_suggested_action,
                 "why_now": p.why_now,
                 "last_touch": p.last_touch_at.isoformat() if p.last_touch_at else "Never",
@@ -159,4 +163,98 @@ async def orbit_get_relationship(linkedin_url: str) -> dict:
             ],
             "next_action": action,
             "why_now": why_now,
+        }
+
+
+@mcp.tool()
+async def orbit_daily_briefing() -> dict:
+    """Primary UX: one call, full pipeline picture. What to act on, what to monitor, what to drop."""
+    await init_db()
+    async with async_session() as session:
+        prospects = (await session.scalars(
+            select(Prospect).where(Prospect.relationship_state != "archived")
+        )).all()
+
+        if not prospects:
+            return {"message": "No active prospects. Add some with orbit_add_prospect."}
+
+        from orbit.services.scoring import compute_attention_metrics
+
+        act_now = []
+        monitor = []
+        cooling_off = []
+        archive_candidates = []
+
+        for p in prospects:
+            p_engagements = (await session.scalars(
+                select(Engagement).where(Engagement.prospect_id == p.id)
+            )).all()
+            p_signals = (await session.scalars(
+                select(Signal).where(Signal.prospect_id == p.id)
+                .order_by(Signal.created_at.desc()).limit(20)
+            )).all()
+
+            eng_dicts = [{"type": e.type, "prospect_response": e.prospect_response} for e in p_engagements]
+            sig_dicts = [{"created_at": s.created_at} for s in p_signals]
+
+            metrics = compute_attention_metrics(
+                eng_dicts, sig_dicts, p.signal_score, p.last_touch_at, p.last_scanned_at,
+            )
+
+            p.staleness_days = metrics["staleness_days"]
+            p.reciprocity_score = metrics["reciprocity_score"]
+            p.overinvestment_risk = metrics["overinvestment_risk"]
+            p.attention_score = metrics["attention_score"]
+
+            top_signal = None
+            if p_signals:
+                best = max(p_signals, key=lambda s: s.composite_score)
+                top_signal = {"title": best.title, "composite_score": best.composite_score, "why_now": best.why_now}
+
+            entry = {
+                "name": p.name or p.linkedin_url,
+                "company": p.company or "Unknown",
+                "attention_score": metrics["attention_score"],
+                "staleness_days": metrics["staleness_days"],
+                "reciprocity_score": metrics["reciprocity_score"],
+            }
+
+            has_actionable_signal = top_signal and top_signal["composite_score"] > 6
+
+            if metrics["attention_score"] > 6 and metrics["staleness_days"] < 14 and has_actionable_signal:
+                entry["top_signal"] = top_signal["title"]
+                entry["suggested_action"] = p.next_suggested_action
+                entry["why_now"] = p.why_now
+                act_now.append(entry)
+            elif metrics["overinvestment_risk"] or (len(p_engagements) > 2 and metrics["reciprocity_score"] < 2):
+                touch_count = len(p_engagements)
+                entry["reason"] = f"{touch_count} touches with no meaningful response. Recommend pause."
+                cooling_off.append(entry)
+            elif metrics["staleness_days"] > 30 and metrics["reciprocity_score"] < 2 and p.signal_density < 3:
+                entry["reason"] = (
+                    f"No signals in {metrics['staleness_days']} days, no reciprocity. Remove?"
+                )
+                archive_candidates.append(entry)
+            else:
+                if has_actionable_signal:
+                    entry["top_signal"] = top_signal["title"]
+                entry["state"] = p.relationship_state
+                monitor.append(entry)
+
+        await session.commit()
+
+        total = len(prospects)
+        need_attention = len(act_now)
+        should_archive = len(archive_candidates)
+        focus = "sharp" if need_attention <= 5 and should_archive <= 2 else "fragmented"
+
+        return {
+            "act_now": act_now,
+            "monitor": monitor,
+            "cooling_off": cooling_off,
+            "archive_candidates": archive_candidates,
+            "portfolio_summary": (
+                f"You have {total} active prospects. {need_attention} need attention. "
+                f"{should_archive} should be archived. Your focus is {focus}."
+            ),
         }

@@ -8,6 +8,7 @@ from orbit.models.prospect import Prospect
 from orbit.models.signal import Signal
 from orbit.models.engagement import Engagement
 from orbit.services.state import transition_state, get_next_action
+from orbit.services.scoring import compute_attention_metrics
 from orbit.services.intelligence import update_relationship_memory, generate_value_ideas, generate_intro_angle
 from orbit.services.exa import find_relevant_content
 
@@ -109,6 +110,26 @@ async def orbit_log_engagement(
                     prospect.communication_preferences = memory_update["communication_preferences"]
         except Exception:
             pass
+
+        engagement_dicts_for_metrics = [
+            {"type": e.type, "prospect_response": e.prospect_response}
+            for e in all_engagements
+        ]
+        signal_dicts_for_metrics = [
+            {"created_at": s.created_at}
+            for s in recent_signals
+        ]
+        metrics = compute_attention_metrics(
+            engagement_dicts_for_metrics,
+            signal_dicts_for_metrics,
+            recent_signals[0].composite_score if recent_signals else 0.0,
+            prospect.last_touch_at,
+            prospect.last_scanned_at,
+        )
+        prospect.staleness_days = metrics["staleness_days"]
+        prospect.reciprocity_score = metrics["reciprocity_score"]
+        prospect.overinvestment_risk = metrics["overinvestment_risk"]
+        prospect.attention_score = metrics["attention_score"]
 
         await session.commit()
 

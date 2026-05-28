@@ -9,7 +9,8 @@ from orbit.models.prospect import Prospect
 from orbit.models.signal import Signal
 from orbit.services.linkedin import get_recent_posts, get_recent_activity
 from orbit.services.exa import find_company_signals
-from orbit.services.scoring import score_signal, compute_signal_density
+from orbit.services.scoring import score_signal, compute_signal_density, compute_attention_metrics
+from orbit.models.engagement import Engagement
 from orbit.services.state import get_next_action
 from orbit.config import SCAN_RATE_LIMIT
 
@@ -197,6 +198,31 @@ async def orbit_scan_prospect(linkedin_url: str) -> dict:
         prospect.why_now = why_now
         prospect.last_scanned_at = datetime.now(timezone.utc)
         prospect.updated_at = datetime.now(timezone.utc)
+
+        all_engagements = (await session.scalars(
+            select(Engagement).where(Engagement.prospect_id == prospect.id)
+        )).all()
+        engagement_dicts_for_metrics = [
+            {"type": e.type, "prospect_response": e.prospect_response}
+            for e in all_engagements
+        ]
+        signal_dicts_for_metrics = [
+            {"created_at": s.created_at} for s in (await session.scalars(
+                select(Signal).where(Signal.prospect_id == prospect.id)
+                .order_by(Signal.created_at.desc()).limit(20)
+            )).all()
+        ]
+        metrics = compute_attention_metrics(
+            engagement_dicts_for_metrics,
+            signal_dicts_for_metrics,
+            prospect.signal_score,
+            prospect.last_touch_at,
+            prospect.last_scanned_at,
+        )
+        prospect.staleness_days = metrics["staleness_days"]
+        prospect.reciprocity_score = metrics["reciprocity_score"]
+        prospect.overinvestment_risk = metrics["overinvestment_risk"]
+        prospect.attention_score = metrics["attention_score"]
 
         await session.commit()
 

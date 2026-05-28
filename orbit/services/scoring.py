@@ -138,3 +138,45 @@ def compute_relationship_state(
         return "warming"
 
     return "cold"
+
+
+def compute_attention_metrics(
+    engagements: list,
+    signals: list,
+    signal_score: float,
+    last_touch_at: datetime | None,
+    last_scanned_at: datetime | None,
+) -> dict:
+    now = datetime.now(timezone.utc)
+
+    candidates = []
+    if last_touch_at:
+        lt = last_touch_at if last_touch_at.tzinfo else last_touch_at.replace(tzinfo=timezone.utc)
+        candidates.append(lt)
+    if last_scanned_at:
+        ls = last_scanned_at if last_scanned_at.tzinfo else last_scanned_at.replace(tzinfo=timezone.utc)
+        candidates.append(ls)
+    for s in signals:
+        sd = s.get("created_at")
+        if isinstance(sd, datetime):
+            sd = sd if sd.tzinfo else sd.replace(tzinfo=timezone.utc)
+            candidates.append(sd)
+    staleness_days = (now - max(candidates)).days if candidates else 999
+
+    total = len(engagements)
+    with_response = sum(1 for e in engagements if e.get("prospect_response"))
+    reciprocity_score = round((with_response / total) * 10, 1) if total > 0 else 0.0
+
+    overinvestment_risk = total > 3 and reciprocity_score < 3.0
+
+    freshness = max(0.0, 10.0 - staleness_days / 7)
+    attention_score = round(
+        signal_score * 0.4 + reciprocity_score * 0.4 + freshness * 0.2, 1
+    )
+
+    return {
+        "staleness_days": staleness_days,
+        "reciprocity_score": reciprocity_score,
+        "overinvestment_risk": overinvestment_risk,
+        "attention_score": attention_score,
+    }
