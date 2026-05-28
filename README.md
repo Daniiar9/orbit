@@ -1,8 +1,14 @@
 # Orbit
 
-Relationship timing intelligence. Know when to show up, what to bring, never pitch first.
+Relationship timing intelligence for founders, consultants, and senior operators who sell through relationships. Know when to show up. Know what to bring. Never pitch first.
 
-Orbit is an open-source MCP server that monitors a small list of prospects and surfaces engagement opportunities based on real signals. You still write and send everything yourself — Orbit just tells you when the timing is right and what to bring.
+Orbit is built for:
+- Founders running relationship-led sales
+- Consultants and agency owners managing high-value accounts
+- Senior AEs and enterprise reps with strategic account lists
+- Operators who maintain networks for years, not quarters
+
+Not for: SDR teams, bulk outreach, or anyone who measures success in email volume.
 
 ## Philosophy
 
@@ -11,6 +17,18 @@ Orbit is an open-source MCP server that monitors a small list of prospects and s
 - **No bulk anything.** MAX_PROSPECTS = 40 by design. This is a relationship tool, not a pipeline spray tool.
 - **Only publicly visible signals.** Orbit only acts on posts, comments, public company news, and job postings. If a prospect would feel "watched" rather than "engaged," the recommendation is blocked.
 - **Evidence-based recommendations only.** Every suggestion cites specific signals with dates. No generic networking advice. No AI-generated warmth.
+
+## What Orbit is not
+
+Orbit is not an AI SDR.
+It is not a sequencing tool.
+It is not a personalization engine.
+It does not send messages on your behalf.
+It does not manufacture urgency.
+It does not fake relationship strength.
+
+Orbit is relationship intelligence with behavioral restraint.
+It helps you act with better judgment, not higher volume.
 
 ## Installation
 
